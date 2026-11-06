@@ -64,6 +64,8 @@ class Settings:
     tts: ProviderSpec
     pace_s: float
     preroll_s: float
+    lead_frames: int
+    vad_silence_frames: int
     log_level: str
 
     def __repr__(self) -> str:
@@ -111,6 +113,8 @@ def load_settings(environ: dict[str, str] | None = None) -> Settings:
         tts=_tts(env),
         pace_s=_non_negative_float(env.get("HABLAIA_FRAME_PACE_MS", "60"), "HABLAIA_FRAME_PACE_MS") / 1000,
         preroll_s=_non_negative_float(env.get("HABLAIA_TTS_PREROLL_MS", "200"), "HABLAIA_TTS_PREROLL_MS") / 1000,
+        lead_frames=_bounded_int(env.get("HABLAIA_AUDIO_LEAD_FRAMES", "8"), "HABLAIA_AUDIO_LEAD_FRAMES", 1, 12),
+        vad_silence_frames=_vad_silence_frames(env.get("HABLAIA_VAD_SILENCE_MS", "1080")),
         log_level=env.get("HABLAIA_LOG_LEVEL", "INFO").upper(),
     )
 
@@ -174,6 +178,18 @@ def _positive_int(value: str, name: str) -> int:
     if number <= 0:
         raise ConfigError(f"{name} must be positive")
     return number
+
+
+def _bounded_int(value: str, name: str, low: int, high: int) -> int:
+    number = _positive_int(value, name)
+    if number < low or number > high:
+        raise ConfigError(f"{name} must be between {low} and {high}")
+    return number
+
+
+def _vad_silence_frames(value: str) -> int:
+    millis = _bounded_int(value, "HABLAIA_VAD_SILENCE_MS", 300, 3000)
+    return max(1, millis // 60)
 
 
 def _non_negative_float(value: str, name: str) -> float:

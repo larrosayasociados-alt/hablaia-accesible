@@ -50,8 +50,8 @@ async def _collect(ws, timeout: float = 5):
             raise AssertionError(f"unexpected websocket message {message.type}")
 
 
-def _uplink() -> list[bytes]:
-    silence = b"\x00\x00" * (16000 * 840 // 1000)
+def _uplink(silence_ms: int = 840) -> list[bytes]:
+    silence = b"\x00\x00" * (16000 * silence_ms // 1000)
     return encode_pcm16(tone_pcm16(16000, 600, amplitude=8000) + silence, 16000)
 
 
@@ -177,7 +177,8 @@ async def test_auto_mode_ends_on_silence_without_listen_stop(client):
         await ws.send_str(json.dumps(HELLO))
         hello = await ws.receive_json()
         await ws.send_str(json.dumps({"session_id": hello["session_id"], "type": "listen", "state": "start", "mode": "auto"}))
-        for packet in _uplink():
+        # Longer than HABLAIA_VAD_SILENCE_MS so a mid-sentence pause is not the end.
+        for packet in _uplink(silence_ms=1600):
             await ws.send_bytes(packet)
         texts, frames = await _collect(ws)
     assert any(item.get("state") == "stop" for item in texts if item["type"] == "tts")

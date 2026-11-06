@@ -17,7 +17,9 @@ class EnergyGate:
     silence_frames: int = 0
     threshold: float = 450.0
     min_speech_frames: int = 4
-    silence_needed: int = 12
+    # 18 frames at 60 ms is a little over a second. A shorter pause cuts a
+    # person who stops to think in the middle of a sentence.
+    silence_needed: int = 18
 
     def feed(self, rms: float) -> bool:
         if rms >= self.threshold:

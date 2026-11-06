@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import uuid
@@ -27,7 +28,8 @@ from hablaia_server.messages import (
     stt_message,
     tts_message,
 )
-from hablaia_server.persona import Persona, prepare_spoken
+from hablaia_server.pace import PlaybackClock
+from hablaia_server.persona import Persona, prepare_spoken, speech_segments
 from hablaia_server.providers import Pipeline
 from hablaia_server.providers.base import ProviderError
 from hablaia_server.vad import EnergyGate
@@ -61,7 +63,7 @@ class Session:
         self.frames: list[bytes] = []
         self.pcm = bytearray()
         self.decoder: Decoder | None = None
-        self.gate = EnergyGate()
+        self.gate = EnergyGate(silence_needed=max(1, settings.vad_silence_frames))
         self.mode = "manual"
         self.listening = False
         self.welcomed = False
@@ -143,6 +145,7 @@ class Session:
             self.mode = mode
         if state == "start":
             await self._cancel_speech()
+            self.ignore_frames = 0
             self.listening = True
             self.frames.clear()
             self.pcm.clear()
@@ -223,19 +226,13 @@ class Session:
                 except ProviderError as exc:
                     log.info("llm failed session=%s code=%s", self.session_id, exc.code)
                     reply = UNAVAILABLE
-            reply = prepare_spoken(reply, self.persona.max_sentences) or UNAVAILABLE
+            reply, segments = speech_segments(reply, self.persona.max_sentences)
+            reply = reply or UNAVAILABLE
+            segments = segments or [reply]
             if heard and self.pipeline.llm.kind != "mock" and reply != UNAVAILABLE:
                 self.history.append({"role": "user", "content": heard[:400]})
                 self.history.append({"role": "assistant", "content": reply[:400]})
                 del self.history[:-8]
-            packets: list[bytes] = []
-            try:
-                audio, rate = await self.pipeline.tts.synthesize(reply)
-                audio = resample_pcm16(audio, rate, DOWNLINK_SAMPLE_RATE)
-                if audio:
-                    packets = encode_pcm16(audio, DOWNLINK_SAMPLE_RATE, FRAME_MS)
-            except (ProviderError, OpusError) as exc:
-                log.info("tts failed session=%s code=%s", self.session_id, getattr(exc, "code", "opus"))
             if generation != self.generation or self.ws.closed:
                 return
             await self._send(stt_message(self.session_id, heard or NOT_HEARD))
@@ -245,17 +242,20 @@ class Session:
             await self._send(tts_message(self.session_id, "sentence_start", reply))
             if self.settings.preroll_s:
                 await self._sleep(self.settings.preroll_s)
-            for index, packet in enumerate(packets):
+            sent_packets = 0
+            clock = PlaybackClock(self.settings.pace_s, self.settings.lead_frames)
+            for segment in segments:
                 if generation != self.generation or self.ws.closed:
                     break
-                await self.ws.send_bytes(wrap_binary_frame(self.version, packet, index * FRAME_MS))
-                if self.settings.pace_s:
-                    await self._sleep(self.settings.pace_s)
+                sent_packets += await self._speak_segment(segment, generation, clock)
+            packets_note = sent_packets
             if generation == self.generation and not self.ws.closed:
                 await self._send(tts_message(self.session_id, "stop"))
                 if rearm and self.mode in {"auto", "realtime"}:
                     self.listening = True
-                    self.ignore_frames = 8
+                    # Late frames from the utterance we just answered are not the next one.
+                    # The device sends a fresh listen start before opening the microphone.
+                    self.ignore_frames = 3
                     self.gate.reset()
                     self._reset_decoder()
             self.speaking = False
@@ -263,11 +263,35 @@ class Session:
                 "turn done session=%s uplink_frames=%d downlink_frames=%d reply_chars=%d",
                 self.session_id,
                 frame_count,
-                len(packets),
+                packets_note,
                 len(reply),
             )
         finally:
             self.busy = False
+
+    async def _speak_segment(self, segment: str, generation: int, clock: PlaybackClock) -> int:
+        try:
+            audio, rate = await self.pipeline.tts.synthesize(segment)
+            audio = resample_pcm16(audio, rate, DOWNLINK_SAMPLE_RATE)
+            packets = encode_pcm16(audio, DOWNLINK_SAMPLE_RATE, FRAME_MS) if audio else []
+        except (ProviderError, OpusError) as exc:
+            log.info("tts failed session=%s code=%s", self.session_id, getattr(exc, "code", "opus"))
+            return 0
+        sent = 0
+        loop = asyncio.get_running_loop()
+        for packet in packets:
+            if generation != self.generation or self.ws.closed:
+                break
+            if self.settings.pace_s:
+                delay = clock.wait_before(loop.time())
+                if delay > 0:
+                    await asyncio.sleep(delay)
+            if generation != self.generation or self.ws.closed:
+                break
+            await self.ws.send_bytes(wrap_binary_frame(self.version, packet, clock.total * FRAME_MS))
+            clock.note_sent(loop.time())
+            sent += 1
+        return sent
 
     async def _on_abort(self) -> None:
         log.info("abort session=%s", self.session_id)
@@ -304,8 +328,6 @@ class Session:
         await self.ws.send_str(json.dumps(payload, ensure_ascii=False, separators=(",", ":")))
 
     async def _sleep(self, seconds: float) -> None:
-        import asyncio
-
         await asyncio.sleep(seconds)
 
     async def _close(self, code: int, reason: str) -> None:

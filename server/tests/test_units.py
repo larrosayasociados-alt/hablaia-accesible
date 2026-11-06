@@ -145,11 +145,31 @@ def test_log_redaction():
     assert token not in record.getMessage()
 
 
-def test_energy_gate_waits_for_silence():
+def test_energy_gate_waits_for_a_real_pause():
     gate = EnergyGate()
+    assert gate.silence_needed >= 18
     assert gate.feed(20) is False
-    for _ in range(4):
+    for _ in range(gate.min_speech_frames):
         assert gate.feed(900) is False
-    for _ in range(11):
+    for _ in range(gate.silence_needed - 1):
         assert gate.feed(10) is False
     assert gate.feed(10) is True
+
+
+def test_playback_keeps_a_cushion_under_the_device_queue():
+    from hablaia_server.pace import DEVICE_DECODE_QUEUE, PlaybackClock
+
+    clock = PlaybackClock(0.06, 8)
+    now = 0.0
+    high = 0.0
+    for _ in range(40):
+        now += clock.wait_before(now)
+        clock.note_sent(now)
+        high = max(high, clock.queued(now))
+        assert clock.queued(now) <= DEVICE_DECODE_QUEUE - 4
+    assert high <= 8.01
+    stalled = PlaybackClock(0.06, 8)
+    for _ in range(8):
+        stalled.note_sent(0.0)
+    assert stalled.wait_before(0.0) == pytest.approx(0.06)
+    assert stalled.wait_before(2.0) == 0.0

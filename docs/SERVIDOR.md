@@ -22,7 +22,7 @@ Después manda un JSON `type: hello` con `transport: websocket` y Opus de subida
 
 La versión binaria por defecto del cliente es la 1: cada trama Opus va en un frame binario, sin cabecera. Las versiones 2 y 3 de `protocol.h` también se aceptan si el aparato manda `Protocol-Version`. La OTA de este servidor pide siempre la versión 1.
 
-El botón de encendido, con el AEC de servidor apagado, usa el modo `auto` (`Application::GetDefaultListeningMode`). En ese modo el aparato no manda `listen stop` al terminar la frase: envía Opus hasta que el servidor dice `tts start`. Este servidor cierra el turno cuando, tras un poco de voz, llegan unas tramas en silencio. El modo `manual` sigue aceptando `listen stop`.
+El botón de encendido, con el AEC de servidor apagado, usa el modo `auto` (`Application::GetDefaultListeningMode`). En ese modo el aparato no manda `listen stop` al terminar la frase: envía Opus hasta que el servidor dice `tts start`. Este servidor espera un poco más de un segundo de silencio (`HABLAIA_VAD_SILENCE_MS`, 1080 por defecto) antes de dar la frase por terminada. Una pausa más corta no corta a la persona. El modo `manual` sigue aceptando `listen stop`.
 
 El orden hacia el aparato es el que `application.cc` puede pintar y oír:
 
@@ -31,8 +31,18 @@ El orden hacia el aparato es el que `application.cc` puede pintar y oír:
 3. `tts` `start`, que pasa el aparato a «hablando». Hasta ese momento tira el audio.
 4. `tts` `sentence_start` con la frase, para la pantalla de 240 por 240.
 5. Una pausa corta, porque `tts start` se aplica en el bucle principal y un Opus inmediato se pierde.
-6. Tramas Opus, más o menos una cada 60 ms, para no llenar la cola de 20 paquetes.
-7. `tts` `stop`.
+6. Tramas Opus con un colchón de unas 8 (`HABLAIA_AUDIO_LEAD_FRAMES`). La cola del aparato es de 20 tramas y tira lo que no cabe; si el servidor manda una y espera 60 ms más el tiempo de envío, el altavoz se queda sin audio y la voz se oye a trozos. El colchón sale junto al principio y luego se mantiene, sin pasar de 16.
+7. `tts` `stop`. En modo `auto` el propio cliente espera a vaciar esa cola antes de volver a escuchar, así que el final de la frase no se corta por el `stop`. La frase se sintetiza por oraciones: la primera puede sonar mientras se prepara la siguiente.
+
+## Si la voz se corta
+
+En el cliente `v2.5.2` hay tres sitios concretos:
+
+- `PushPacketToDecodeQueue` descarta la trama si ya hay 20. Un envío de golpe deja agujeros en medio de la frase.
+- Entrar en «hablando» llama a `ResetDecoder()` y, hasta ese momento, el audio que llegue se tira. Por eso hay una espera corta (`HABLAIA_TTS_PREROLL_MS`, 200) antes de la primera trama.
+- El fin de frase por energía, si es de menos de un segundo, cierra el turno mientras la persona todavía está pensando.
+
+Un servidor lejano añade otro corte: el retardo y el Wi-Fi vacían el colchón. Acercar el proceso a Europa reduce ese retardo. No lo quita si la red de casa pierde paquetes. Subir `HABLAIA_AUDIO_LEAD_FRAMES` (hasta 12) deja más margen; bajarlo acerca el inicio y aguanta peor un Wi-Fi irregular.
 
 Un mensaje `mcp` se registra y no se ejecuta. Este servidor no anuncia herramientas. No manda `system reboot`.
 
@@ -196,7 +206,7 @@ En el nivel INFO se anota el tipo de mensaje, la MAC, cuántas tramas y cuántos
 
 - Nadie ha apuntado la placa a este proceso. Una prueba verde no es una conversación oída en el altavoz.
 - Sin las claves, el servidor no entiende lo que se dice. La frase de prueba lo dice.
-- La detección de fin de frase en modo `auto` es un umbral de energía, no un modelo de voz. Puede cortar pronto, esperar de más, o volver a contestar si el micrófono oye al altavoz. Tras cada respuesta se ignoran unas tramas, y eso no sustituye a un AEC ajustado.
+- La detección de fin de frase en modo `auto` es un umbral de energía, no un modelo de voz. Con 1080 ms de silencio aguanta una pausa breve y aun así puede cerrar tarde o volver a contestar si el micrófono oye al altavoz. Al empezar de nuevo a escuchar se ignoran solo 3 tramas, y un `listen start` las anula.
 - El modo `realtime` se trata como `auto`. No hay cancelación de eco en el servidor.
 - La respuesta se dice cuando el modelo ha terminado la frase, no palabra a palabra.
 - El reconocimiento real, cuando se configura Azure, es una petición por turno, no un stream parcial. El tope documentado de ese API corto es de unos 60 segundos.

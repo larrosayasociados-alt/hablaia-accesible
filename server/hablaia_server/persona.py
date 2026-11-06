@@ -76,3 +76,15 @@ def prepare_spoken(text: str, maximum: int) -> str:
     if len(spoken) > 400:
         spoken = spoken[:400].rsplit(" ", 1)[0].strip()
     return spoken
+
+
+def speech_segments(text: str, maximum: int) -> tuple[str, list[str]]:
+    """Full line for the screen, and the sentences to synthesize in order.
+
+    The first sentence can start playing while the next one is still being synthesized.
+    """
+    spoken = prepare_spoken(text, maximum)
+    if not spoken:
+        return "", []
+    parts = [part.strip() for part in _SENTENCE.findall(spoken) if part.strip()]
+    return spoken, parts or [spoken]
