@@ -1,0 +1,21 @@
+# Sample unit for a European VM. It is not installed on any machine.
+# Copy it only after Alejandro approves a preview host.
+# Secrets stay in /etc/hablaia-voice-preview.env, which is not part of git.
+# That file must set HABLAIA_BIND=0.0.0.0:8787, HABLAIA_PUBLIC_WS_URL,
+# HABLAIA_TOKEN_SECRET and HABLAIA_DEVICES. Do not set HABLAIA_ALLOW_ANY_DEVICE.
+
+[Unit]
+Description=HablaIA voice preview (not production)
+After=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/hablaia-accesible/server
+EnvironmentFile=/etc/hablaia-voice-preview.env
+ExecStart=/opt/hablaia-accesible/server/.venv/bin/python -m hablaia_server
+Restart=on-failure
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

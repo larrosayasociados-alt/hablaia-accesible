@@ -1,0 +1,14 @@
+{
+  "_notes": "Ejemplo para un futuro servidor HablaIA. El firmware ignora las claves que no conoce. No incluye token ni un host real. Si se anaden mqtt y websocket a la vez, el cliente v2.5.2 usa mqtt.",
+  "firmware": {
+    "version": "2.5.2"
+  },
+  "server_time": {
+    "timestamp": 0,
+    "timezone_offset": 60
+  },
+  "websocket": {
+    "url": "wss://voice.example.invalid/xiaozhi/v1/",
+    "version": 1
+  }
+}

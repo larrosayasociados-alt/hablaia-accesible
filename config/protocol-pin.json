@@ -1,0 +1,50 @@
+{
+  "role": "wire protocol for the HablaIA preview voice server",
+  "client": {
+    "project": "xiaozhi-esp32",
+    "repository": "https://github.com/78/xiaozhi-esp32",
+    "tag": "v2.5.2",
+    "commit": "49b4380b3faa0ceadd28a3e78aaf0f311c46c57e",
+    "license": "MIT",
+    "sources": [
+      "docs/websocket.md",
+      "main/protocols/websocket_protocol.h",
+      "main/protocols/websocket_protocol.cc",
+      "main/protocols/protocol.h",
+      "main/protocols/protocol.cc",
+      "main/ota.cc",
+      "main/audio/audio_service.h"
+    ]
+  },
+  "audio": {
+    "uplink": {
+      "format": "opus",
+      "sample_rate": 16000,
+      "channels": 1,
+      "frame_duration_ms": 60
+    },
+    "downlink": {
+      "format": "opus",
+      "sample_rate": 24000,
+      "channels": 1,
+      "frame_duration_ms": 60,
+      "reason": "AUDIO_OUTPUT_SAMPLE_RATE of waveshare/esp32-s3-touch-lcd-1.54 in the pinned tag is 24000. application.cc warns when the server hello sample_rate differs."
+    },
+    "binary_default": 1,
+    "libopus": "1.4"
+  },
+  "ota": {
+    "method": "POST",
+    "paths": ["/xiaozhi/ota/", "/xiaozhi/ota"],
+    "websocket_path": "/xiaozhi/v1/",
+    "timezone_offset_unit": "minutes",
+    "timestamp_unit": "utc milliseconds",
+    "firmware_url": "omitted"
+  },
+  "compatible_server_family": {
+    "repository": "https://github.com/xinnan-tech/xiaozhi-esp32-server",
+    "used_as": "cross-check of hello, listen, stt, tts and raw Opus version 1",
+    "vendored": false,
+    "reason": "The device implements the protocol in the pinned client sources. That tree is the source of truth. The Python server above speaks the same messages but ships FunASR, MQTT and a control panel this preview does not run."
+  }
+}
