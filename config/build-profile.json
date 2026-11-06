@@ -1,0 +1,15 @@
+{
+  "id": "hablaia-accesible-es",
+  "upstream_pin": "config/upstream-pin.json",
+  "board_dir": "waveshare/esp32-s3-touch-lcd-1.54",
+  "board_name": "esp32-s3-touch-lcd-1.54",
+  "target": "esp32s3",
+  "language": "es-ES",
+  "kconfig_language": "LANGUAGE_ES_ES",
+  "wake_word": "disabled",
+  "persona": "config/persona/asistente-senior.es.json",
+  "keeps_upstream_board_sources": true,
+  "custom_board_firmware": false,
+  "ota_url_in_repo": null,
+  "secrets_in_repo": false
+}

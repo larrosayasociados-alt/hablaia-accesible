@@ -1,0 +1,38 @@
+{
+  "project": "xiaozhi-esp32",
+  "repository": "https://github.com/78/xiaozhi-esp32",
+  "tag": "v2.5.2",
+  "commit": "49b4380b3faa0ceadd28a3e78aaf0f311c46c57e",
+  "license": "MIT",
+  "board_support_pull_request": 1868,
+  "board_support_first_release": "v2.2.6",
+  "release_asset": {
+    "name": "v2.5.2_waveshare-esp32-s3-touch-lcd-1.54.zip",
+    "sha256": "35f745f502d3284823331fb3a091004ca74f8f3691c144e0a9969ea5bb714f9e",
+    "contains": "merged-binary.bin"
+  },
+  "board": {
+    "dir": "waveshare/esp32-s3-touch-lcd-1.54",
+    "type": "esp32-s3-touch-lcd-1.54",
+    "build_name": "esp32-s3-touch-lcd-1.54",
+    "target": "esp32s3",
+    "kconfig_symbol": "BOARD_TYPE_WAVESHARE_ESP32_S3_TOUCH_LCD_1_54",
+    "menu_label": "Waveshare ESP32-S3-Touch-LCD-1.54"
+  },
+  "sdk": {
+    "readme_minimum": "6.0.1",
+    "readme_recommended_branch": "release/v6.1",
+    "release_notes_built_with": "6.1.0",
+    "docker_base_image": "espressif/idf:release-v6.1",
+    "readme_rejects": "ESP-IDF 5.x"
+  },
+  "blobs": {
+    "main/boards/waveshare/esp32-s3-touch-lcd-1.54/config.h": "f601e6d39066b7c05bb55c32d9117ec99aa907a8dcbac370ee47c1bc0e93f70f",
+    "main/boards/waveshare/esp32-s3-touch-lcd-1.54/config.json": "f90d0e4c11dff4352721e066a833b8fa8764ba710a232e34a93c450bb257adfc",
+    "main/boards/waveshare/esp32-s3-touch-lcd-1.54/README.md": "b24cb95703b1143bf50fc52e0351b94b961e9389733990053c1159233c7c12bc",
+    "main/assets/locales/es-ES/language.json": "9fadb3d949f2361e28a7e401c589bf68d140020703f6aef30f901c6827df943d",
+    "sdkconfig.defaults": "c11d0c8d6ff4100947deb7b7f1b07682784f782ec3f47c2cbfaea9ef5b8ed0e9",
+    "sdkconfig.defaults.esp32s3": "315d65976815214c463cb605b2242c4f40e2bff078bcc1341d2f71892a3a7797",
+    "partitions/v2/16m.csv": "58a8787d486fe89bac4055acc310b7a0d6edd33e90c61d2ca6a705d251460333"
+  }
+}
