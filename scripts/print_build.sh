@@ -39,5 +39,6 @@ print("  idf.py menuconfig")
 print("  idf.py build")
 print("menuconfig: Xiaozhi Assistant / Waveshare ESP32-S3-Touch-LCD-1.54 / Spanish")
 print()
-print("No se imprime idf.py flash. La copia de la flash en el Mac todavia no esta cerrada.")
+print("Antes, en este repositorio: bash scripts/prepare_firmware.sh")
+print("La escritura en la placa esta en docs/PRUEBA.md. Este script no la imprime.")
 PY

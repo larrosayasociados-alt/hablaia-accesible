@@ -1,6 +1,6 @@
 # Hardware, copia de seguridad y compilacion
 
-Este documento describe la unidad Waveshare que ya arranca con el firmware Xiaozhi de fabrica, la imagen oficial que la soporta y como volver a esa flash. No sustituye la copia que se esta leyendo en el Mac: esa lectura sigue en curso y este repositorio no la da por terminada.
+Este documento describe la unidad Waveshare, el cliente Xiaozhi que ya la soporta y la copia de la flash original. Esa copia ya terminó en el Mac: 16777216 bytes, SHA-256 `037b8878a1ad0e344ffc88eb7f72216364a571f22267c894b7281f35c3ab0095`. No está en este repositorio. La instalación de prueba y la vuelta atrás están en `docs/PRUEBA.md`.
 
 ## Placa
 
@@ -17,7 +17,7 @@ La ficha de Waveshare publica estas piezas:
 - Ranura de tarjeta TF.
 - USB Type-C, botones PLUS, PWR y BOOT, carga de bateria de litio de 3,7 V.
 
-La lectura hecha en el Mac de Alejandro, y no repetida desde este repositorio, fue: ESP32-S3 revision v0.2, 8 MB de PSRAM embebida, flash QIO de 16 MB e interfaz USB-JTAG/serie. Encaja con el ESP32-S3R8 y la flash de 16 MB de la ficha. La copia de solo lectura de esa flash esta en el Mac y todavia no se considera completa.
+La lectura hecha en el Mac, y no repetida desde este repositorio, fue: ESP32-S3 revision v0.2, 8 MB de PSRAM embebida, flash QIO de 16 MB e interfaz USB-JTAG/serie. Encaja con el ESP32-S3R8 y la flash de 16 MB de la ficha. La copia completa de esa flash está en el Mac y solo se identifica aquí por tamaño y SHA-256.
 
 ## Lo que ya trae el cliente oficial
 
@@ -122,7 +122,7 @@ En menuconfig: `Xiaozhi Assistant`, despues el tipo de placa `Waveshare ESP32-S3
 idf.py build
 ```
 
-y, en el mismo archivo, `idf.py build flash monitor`. Ese segundo comando escribe la flash. No se usa hasta que la copia del Mac este terminada y comprobada, y solo en el ordenador que tiene el cable.
+y, en el mismo archivo, `idf.py build flash monitor`. Ese segundo comando escribe la flash. La primera prueba usa las direcciones de `build/flash_args`, descritas en `docs/PRUEBA.md`, y no un binario fusionado.
 
 Camino que `docs/custom-board.md` llama opcion recomendada cuando hay `config.json`. Para esta placa, el directorio relativo a `main/boards` y el `builds[].name` son:
 
@@ -152,13 +152,13 @@ python scripts/build.py --list-boards
 
 Hay tres imagenes distintas y no se pueden usar unas por otras:
 
-1. La flash que ahora mismo tiene la unidad. Es la unica copia bit a bit del firmware chino que ya se conecta por Wi-Fi, incluidas las credenciales de la NVS. Se esta leyendo en el Mac. Este repositorio no tiene ese archivo, no conoce su tamano final ni su SHA-256, y no afirma que la lectura haya acabado.
+1. La flash que ahora mismo tiene la unidad. Es la copia bit a bit del firmware con el que ya se conecta por Wi-Fi, incluidas las credenciales de la NVS. Está en el Mac, mide 16777216 bytes y su SHA-256 es `037b8878a1ad0e344ffc88eb7f72216364a571f22267c894b7281f35c3ab0095`. Este repositorio no contiene el archivo.
 2. El ZIP oficial `v2.5.2_waveshare-esp32-s3-touch-lcd-1.54.zip`. Es una imagen Xiaozhi conocida para esta placa, en chino por defecto y apuntando al servidor por defecto. No es la flash actual de la unidad.
 3. Una compilacion futura con `--language es-ES`. Sustituye la aplicacion. No restaura la unidad.
 
-Hasta que el archivo del Mac exista, tenga el tamano de la flash detectada y este copiado fuera de la placa, no se borra ni se escribe la flash.
+No se escribe la placa sin volver a comprobar ese tamaño y ese SHA-256 en el archivo del Mac.
 
-Lectura, tomada de la documentacion de esptool (`read-flash`). El ejemplo oficial usa 460800 baudios y `ALL` para detectar el tamano. En el Mac se sustituye `PORT` por el dispositivo USB que ya esta usando la lectura en curso:
+Lectura, tomada de la documentacion de esptool (`read-flash`). El ejemplo oficial usa 460800 baudios y `ALL` para detectar el tamano. En el Mac se sustituye `PORT` por el dispositivo USB:
 
 ```bash
 esptool -p PORT -b 460800 read-flash 0 ALL flash_contents.bin
@@ -180,10 +180,10 @@ Waveshare, en "Firmware Flashing and Erasing", flashea el binario de sus ejemplo
 
 El issue 2003 del cliente muestra una escritura real de un `merged-binary.bin` de esta placa en el offset `0x0`. Sirve como precedente del offset, no como orden para ejecutarla ahora.
 
-`idf.py build flash monitor`, que es la linea del README de la placa, tambien escribe la flash. Queda para el Mac, despues de la copia, y no forma parte de la CI.
+`idf.py build flash monitor`, que es la linea del README de la placa, tambien escribe la flash. La prueba descrita en `docs/PRUEBA.md` usa en su lugar `write-flash` del binario fusionado, y la vuelta atrás escribe los 16 MB leídos. Ninguna de las dos forma parte de la CI.
 
 Restaurar el ZIP oficial devuelve una aplicacion Xiaozhi de esta placa, en el idioma por defecto del release, y puede borrar la NVS. Restaurar el `read-flash` del Mac devuelve el firmware con el que la unidad ya habla por Wi-Fi, credenciales incluidas. Son recuperaciones distintas. Las dos siguen siendo posibles porque este perfil no cambia la tabla de particiones ni el tipo de placa.
 
 ## Que no se ha hecho desde aqui
 
-No se ha flasheado, no se ha abierto el puerto USB de la unidad y no se ha contactado ningun servicio de produccion. La compilacion del firmware exige ESP-IDF `release/v6.1` y el gestor de componentes; este entorno no trae ese SDK. La CI comprueba el pin, los hashes de los archivos citados y que el perfil en espanol sea coherente. No genera `merged-binary.bin`.
+No se ha flasheado, no se ha abierto el puerto USB de la unidad y no se ha contactado ningún servicio de producción. Sí se compiló aquí con ESP-IDF v6.1.0: `build/xiaozhi.bin` mide 0x2b8c50 bytes y el enlace incluye las cuatro frases Opus. La CI no repite esa compilación; ejecuta el horario, los hashes, los anclajes del parche y la coincidencia de los Opus.

@@ -1,0 +1,16 @@
+{
+  "timezone": "Europe/Madrid",
+  "posix_tz": "CET-1CEST,M3.5.0/2,M10.5.0/3",
+  "window_start": "09:00",
+  "window_end": "21:00",
+  "interval_minutes": 180,
+  "grace_minutes": 10,
+  "snooze_minutes": 30,
+  "status": "A su ritmo",
+  "messages": [
+    "Si le parece, dé unos pasos a su ritmo.",
+    "Puede estirarse un momento, con suavidad.",
+    "Un pequeño paseo, solo si le apetece.",
+    "Si quiere, mueva los hombros con calma."
+  ]
+}

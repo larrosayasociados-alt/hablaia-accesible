@@ -53,6 +53,17 @@ No se crea un `BOARD_TYPE` nuevo. `docs/custom-board.md` del cliente explica que
 - El cliente necesita red. La guia de Waveshare lo dice para XiaoZhi y el codigo no trae un modelo de lenguaje en la placa.
 - La pantalla y los avisos fijos salen en espanol. La respuesta libre sale en espanol solo si el servidor usa la persona y un TTS `es-ES`. El servidor oficial no tiene por que hacerlo.
 
-## Que queda fuera de este repositorio
+## Qué ya está en el firmware y qué espera un servidor
 
-No hay implementacion del servidor, no hay despliegue y no hay cambios en recursos que ya esten en produccion. El siguiente trabajo de firmware, si la voz en espanol con el boton no basta, seria un parche minimo sobre el tag fijado. Hasta entonces la recuperacion es la que describe `docs/HARDWARE.md`: la lectura completa del Mac, todavia no dada por cerrada, o el ZIP oficial de esta misma identidad de placa.
+En la imagen de esta rama, sin un servidor HablaIA:
+
+- Pantalla, táctil, codec, AEC, botones y Wi-Fi del cliente oficial.
+- Textos y avisos fijos en `es-ES`. La palabra de activación china queda desactivada en el perfil de compilación. La pulsación corta de encendido abre la conversación.
+- El aviso de movimiento: a las 09:00, 12:00, 15:00 y 18:00 hora de Madrid, una frase corta en pantalla y en un Opus grabado en el aparato. Descartar, aplazar y no repetir el mismo turno están en `firmware/movement_reminder/` y tienen pruebas que no necesitan la placa.
+- El reloj se acepta cuando la respuesta OTA trae `server_time`. El desfase que Xiaozhi suma al reloj se guarda y se deshace para calcular Madrid. Eso puede seguir haciéndolo el servidor Xiaozhi por defecto. El aviso de cada tres horas no necesita un servidor HablaIA.
+
+La conversación libre sí lo necesita. El botón de hablar abre el canal de voz contra la URL que devuelva la OTA. La persona Asistente senior, el modelo y la voz de esa conversación no están en la flash. Un servidor posterior puede además mandar un mensaje `notify`, como describe `docs/notify.md` del tag; el aviso horario no depende de ese mensaje.
+
+## Qué queda fuera de este repositorio
+
+No hay implementación del servidor, no hay despliegue y no hay cambios en recursos que ya estén en producción. La vuelta al programa original es la copia de 16 MB del Mac, descrita en `docs/PRUEBA.md`. El ZIP oficial de esta misma placa es otra imagen, no esa copia.

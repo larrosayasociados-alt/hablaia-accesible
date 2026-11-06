@@ -12,6 +12,9 @@ PIN_PATH = ROOT / "config" / "upstream-pin.json"
 PROFILE_PATH = ROOT / "config" / "build-profile.json"
 PERSONA_PATH = ROOT / "config" / "persona" / "asistente-senior.es.json"
 OTA_PATH = ROOT / "config" / "backend" / "ota-response.example.json"
+REMINDER_PATH = ROOT / "config" / "reminder" / "daytime.json"
+BACKUP_PATH = ROOT / "config" / "stock-backup.json"
+DEFAULTS_PATH = ROOT / "firmware" / "movement_reminder" / "reminder_defaults.h"
 
 REQUIRED = (
     PIN_PATH,
@@ -20,7 +23,11 @@ REQUIRED = (
     OTA_PATH,
     ROOT / "docs" / "HARDWARE.md",
     ROOT / "docs" / "ARQUITECTURA.md",
+    ROOT / "docs" / "PRUEBA.md",
     ROOT / "config" / "backend" / "README.md",
+    REMINDER_PATH,
+    BACKUP_PATH,
+    DEFAULTS_PATH,
 )
 
 
@@ -66,6 +73,55 @@ def scan_tree() -> None:
                 fail(f"{path.relative_to(ROOT)} contains {fragment}")
         if production_host in text.lower():
             fail(f"{path.relative_to(ROOT)} names a production host")
+
+
+def minutes(value: str) -> int:
+    hour, minute = value.split(":")
+    return int(hour) * 60 + int(minute)
+
+
+def check_reminder(persona: dict) -> None:
+    reminder = load(REMINDER_PATH)
+    header = DEFAULTS_PATH.read_text(encoding="utf-8")
+    expected = {
+        "HABLAIA_ZONE_NAME": reminder["timezone"],
+        "HABLAIA_POSIX_TZ": reminder["posix_tz"],
+        "HABLAIA_STATUS": reminder["status"],
+        "HABLAIA_INTERVAL_MINUTES": str(reminder["interval_minutes"]),
+        "HABLAIA_GRACE_MINUTES": str(reminder["grace_minutes"]),
+        "HABLAIA_SNOOZE_MINUTES": str(reminder["snooze_minutes"]),
+        "HABLAIA_WINDOW_START_MINUTE": f"({minutes(reminder['window_start']) // 60} * 60)",
+        "HABLAIA_WINDOW_END_MINUTE": f"({minutes(reminder['window_end']) // 60} * 60)",
+    }
+    for name, value in expected.items():
+        if f'#define {name} "{value}"' not in header and f"#define {name} {value}" not in header:
+            fail(f"reminder default {name} does not match daytime.json")
+    if reminder["interval_minutes"] != 180:
+        fail("the movement reminder must stay on a three-hour interval")
+    messages = reminder["messages"]
+    if len(messages) != 4:
+        fail("the reminder needs four short phrases")
+    prompt = persona["system_prompt"]
+    if "caminado" not in prompt or "estirado" not in prompt:
+        fail("the senior persona must not claim unstated movement")
+    banned = ("salud", "ejercicio", "dolor", "médico", "dosis", "diagnóstico", "debe")
+    for index, message in enumerate(messages):
+        if f'#define HABLAIA_MESSAGE_{index} "{message}"' not in header:
+            fail(f"phrase {index} is not the compiled default")
+        lowered = message.casefold()
+        for word in banned:
+            if word in lowered:
+                fail(f"phrase {index} contains {word}")
+        if len(message) > 80:
+            fail(f"phrase {index} is too long for the 240 pixel screen")
+    backup = load(BACKUP_PATH)
+    if backup.get("bytes") != 16777216 or backup.get("stored_in_repo") is not False:
+        fail("stock backup record is wrong")
+    if backup.get("sha256") != "037b8878a1ad0e344ffc88eb7f72216364a571f22267c894b7281f35c3ab0095":
+        fail("stock backup hash does not match the completed Mac read")
+    for path in ROOT.rglob("*"):
+        if path.is_file() and path.stat().st_size == 16777216:
+            fail(f"private flash image must not be committed: {path}")
 
 
 def main() -> None:
@@ -115,6 +171,7 @@ def main() -> None:
             fail(f"persona prompt is missing {needle!r}")
     if len(prompt) < 400:
         fail("persona prompt is too short to be the senior assistant instruction")
+    check_reminder(persona)
 
     websocket = ota.get("websocket")
     if not isinstance(websocket, dict):
