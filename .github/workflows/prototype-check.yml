@@ -1,0 +1,27 @@
+name: prototype-check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  profile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check the Spanish profile
+        run: python3 scripts/check_prototype.py
+      - name: Check the pinned Xiaozhi files
+        run: python3 scripts/verify_upstream.py
+      - name: Check the movement prompts
+        run: python3 scripts/generate_prompts.py
+      - name: Check the Xiaozhi patch anchors
+        run: python3 scripts/apply_hablaia.py --check
+      - name: Test the daytime reminder schedule
+        run: bash scripts/test_reminder.sh
+
+  # A firmware compile needs ESP-IDF release/v6.1 and must not flash the board.
+  # This workflow only checks the pin and the HablaIA profile.

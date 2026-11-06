@@ -1,0 +1,15 @@
+secrets/
+*.local
+*.local.json
+ota-url.local
+backups/
+*.bin
+*.zip
+third_party/
+__pycache__/
+*.pyc
+build/
+sdkconfig
+sdkconfig.old
+managed_components/
+.DS_Store
